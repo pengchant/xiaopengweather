@@ -1,6 +1,7 @@
 package com.chenpeng.xiaopengweather;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -28,6 +29,7 @@ import com.chenpeng.xiaopengweather.gson.Forecast;
 import com.chenpeng.xiaopengweather.gson.Now;
 import com.chenpeng.xiaopengweather.gson.Suggestion;
 import com.chenpeng.xiaopengweather.gson.Weather;
+import com.chenpeng.xiaopengweather.service.AutoUpdateService;
 import com.chenpeng.xiaopengweather.util.HttpUtil;
 import com.chenpeng.xiaopengweather.util.Utility;
 import com.google.gson.Gson;
@@ -204,8 +206,6 @@ public class WeatherAcitivy extends AppCompatActivity {
      */
     public void requestWeather(final String locationname) {
         final Context _mcurrent = this;
-        // 待返回的weather值
-        final Weather l_weather = new Weather();
         // 获取天气信息
         HeWeather.getWeather(
                 _mcurrent,
@@ -231,68 +231,9 @@ public class WeatherAcitivy extends AppCompatActivity {
                     public void onSuccess(List<interfaces.heweather.com.interfacesmodule.bean.weather.Weather> list) {
                         // 获取结果数据
                         if (list != null && list.size() > 0) {
+                            // 解析结果
                             interfaces.heweather.com.interfacesmodule.bean.weather.Weather _weather = list.get(0);
-                            // 解析数据
-                            // 1.status
-                            l_weather.status = _weather.getStatus();
-                            // 2.basic
-                            Basic l_basic = new Basic();
-                            l_basic.cityName = _weather.getBasic().getLocation();
-                            l_basic.weatherId = _weather.getBasic().getCid();
-                            Basic.Update _update = l_basic.new Update();
-                            _update.updateTime = _weather.getUpdate().getLoc();
-                            l_basic.update = _update;
-                            l_weather.basic = l_basic;
-                            // 3.aqi
-                            AQI l_aqi = new AQI();
-                            l_aqi.hum = _weather.getNow().getHum();
-                            l_aqi.vis = _weather.getNow().getVis();
-                            l_weather.aqi = l_aqi;
-                            // 4.now
-                            Now l_now = new Now();
-                            l_now.temperature = _weather.getNow().getTmp();
-                            Now.More _more = l_now.new More();
-                            _more.info = _weather.getNow().getCond_txt();
-                            l_now.more = _more;
-                            l_weather.now = l_now;
-                            // 5.suggestion
-                            Suggestion l_suggestion = new Suggestion();
-                            Suggestion.Comfort _comfort = l_suggestion.new Comfort();
-                            Suggestion.CarWash _carwash = l_suggestion.new CarWash();
-                            Suggestion.Sport _sport = l_suggestion.new Sport();
-                            String type_str = "";
-                            for (LifestyleBase e : _weather.getLifestyle()) {
-                                type_str = e.getType();
-                                if ("comf".equals(type_str)) { // 舒适度指数
-                                    _comfort.info = e.getTxt();
-                                    l_suggestion.comfort = _comfort;
-                                } else if ("cw".equals(type_str)) { // 洗车指数
-                                    _carwash.info = e.getTxt();
-                                    l_suggestion.carWash = _carwash;
-                                } else if ("sport".equals(type_str)) { // 运动指数
-                                    _sport.info = e.getTxt();
-                                    l_suggestion.sport = _sport;
-                                }
-                            }
-                            l_weather.suggestion = l_suggestion;
-                            // 6.daily_forecast
-                            List<Forecast> l_forecastlist = new ArrayList<>();
-                            for (ForecastBase f : _weather.getDaily_forecast()) {
-                                Forecast _forecast = new Forecast();
-                                // date
-                                _forecast.date = f.getDate();
-                                // cond
-                                Forecast.More _fmore = _forecast.new More();
-                                _fmore.info = f.getCond_txt_d();
-                                _forecast.more = _fmore;
-                                // tmp
-                                Forecast.Temperature _ftemp = _forecast.new Temperature();
-                                _ftemp.max = f.getTmp_max();
-                                _ftemp.min = f.getTmp_min();
-                                _forecast.temperature = _ftemp;
-                                l_forecastlist.add(_forecast);
-                            }
-                            l_weather.forecastList = l_forecastlist;
+                            final Weather l_weather = Utility.handleMyResponse(_weather);
 
                             // 放到缓存中
                             SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherAcitivy.this).edit();
@@ -369,6 +310,10 @@ public class WeatherAcitivy extends AppCompatActivity {
         sportText.setText(sport);
         // 显示weatherLAYOUT
         weatherLayout.setVisibility(View.VISIBLE);
+
+        // 后台启动一个自动更新的服务(每隔8小时更新一次数据)
+        Intent intent = new Intent(this, AutoUpdateService.class);
+        startService(intent);
     }
 
 

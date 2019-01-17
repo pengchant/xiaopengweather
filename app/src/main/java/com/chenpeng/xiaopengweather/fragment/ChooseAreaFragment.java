@@ -1,6 +1,7 @@
 package com.chenpeng.xiaopengweather.fragment;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -16,6 +17,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.chenpeng.xiaopengweather.R;
+import com.chenpeng.xiaopengweather.WeatherAcitivy;
 import com.chenpeng.xiaopengweather.db.City;
 import com.chenpeng.xiaopengweather.db.County;
 import com.chenpeng.xiaopengweather.db.Province;
@@ -118,6 +120,13 @@ public class ChooseAreaFragment extends Fragment {
                     selectedCity = cityList.get(position);
                     //查询县
                     queryCounties();
+                } else if (currentLevel == LEVEL_COUNTY) {
+                    // 启动新的天气详情activity
+                    String locationname = countyList.get(position).getWeatherId();
+                    Intent intent = new Intent(getActivity(), WeatherAcitivy.class);
+                    intent.putExtra("locationname", locationname);
+                    startActivity(intent);
+                    getActivity().finish();
                 }
             }
         });

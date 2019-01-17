@@ -6,10 +6,14 @@ import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -81,9 +85,23 @@ public class WeatherAcitivy extends AppCompatActivity {
     // 每日背景图
     private ImageView bingPicImg;
 
+    // 下拉刷新
+    public SwipeRefreshLayout swipeRefreshLayout;
+
+    // 当前城市的编号
+    private String weatherId;
+
+    // drawerlayout
+    public DrawerLayout drawerLayout;
+
+    // 主页按钮
+    private Button navButton;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // 设置全屏效果
         if(Build.VERSION.SDK_INT >= 21){
             View decorView = getWindow().getDecorView();
             decorView.setSystemUiVisibility(
@@ -106,6 +124,11 @@ public class WeatherAcitivy extends AppCompatActivity {
         carWashText = findViewById(R.id.car_wash_text);
         sportText = findViewById(R.id.sport_text);
         bingPicImg = findViewById(R.id.bing_pic_img);
+        swipeRefreshLayout = findViewById(R.id.swipe_refresh);
+        swipeRefreshLayout.setColorSchemeResources(R.color.colorPrimary);
+        drawerLayout = findViewById(R.id.drawer_layout);
+        navButton = findViewById(R.id.nav_button);
+
         // 读取weather的缓存数据
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather", null);
@@ -119,6 +142,8 @@ public class WeatherAcitivy extends AppCompatActivity {
         // 加载天气信息
         if (weatherString != null) { // 如果有缓存
             Weather weather = new Gson().fromJson(weatherString, Weather.class);
+            // 记录下当前的城市编号
+            weatherId = weather.basic.weatherId;
             // 直接更新UI
             showWeatherInfo(weather);
         } else { // 如果没有缓存
@@ -126,6 +151,20 @@ public class WeatherAcitivy extends AppCompatActivity {
             weatherLayout.setVisibility(View.INVISIBLE);
             requestWeather(locationname);
         }
+        // 为刷新编写逻辑
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeather(weatherId);
+            }
+        });
+        // 为返回主页按钮绑定事件
+        navButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
     }
 
     /**
@@ -182,6 +221,8 @@ public class WeatherAcitivy extends AppCompatActivity {
                             @Override
                             public void run() {
                                 Toast.makeText(WeatherAcitivy.this, "获取天气信息失败!", Toast.LENGTH_SHORT).show();
+                                // 停止显示加载动画
+                                swipeRefreshLayout.setRefreshing(false);
                             }
                         });
                     }
@@ -258,6 +299,9 @@ public class WeatherAcitivy extends AppCompatActivity {
                             editor.putString("weather", new Gson().toJson(l_weather));
                             editor.apply();
 
+                            // 记录当前的 weatherid/locationname
+                            weatherId = _weather.getBasic().getCid();
+
                             // 更新UI
                             if (l_weather != null) {
                                 runOnUiThread(new Runnable() {
@@ -265,6 +309,8 @@ public class WeatherAcitivy extends AppCompatActivity {
                                     public void run() {
                                         // 更新页面
                                         showWeatherInfo(l_weather);
+                                        // 停止显示加载动画
+                                        swipeRefreshLayout.setRefreshing(false);
                                     }
                                 });
                             }

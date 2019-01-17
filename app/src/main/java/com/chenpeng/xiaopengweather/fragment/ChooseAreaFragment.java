@@ -16,11 +16,13 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.chenpeng.xiaopengweather.MainActivity;
 import com.chenpeng.xiaopengweather.R;
 import com.chenpeng.xiaopengweather.WeatherAcitivy;
 import com.chenpeng.xiaopengweather.db.City;
 import com.chenpeng.xiaopengweather.db.County;
 import com.chenpeng.xiaopengweather.db.Province;
+import com.chenpeng.xiaopengweather.gson.Weather;
 import com.chenpeng.xiaopengweather.util.HttpUtil;
 import com.chenpeng.xiaopengweather.util.Utility;
 
@@ -123,10 +125,18 @@ public class ChooseAreaFragment extends Fragment {
                 } else if (currentLevel == LEVEL_COUNTY) {
                     // 启动新的天气详情activity
                     String locationname = countyList.get(position).getWeatherId();
-                    Intent intent = new Intent(getActivity(), WeatherAcitivy.class);
-                    intent.putExtra("locationname", locationname);
-                    startActivity(intent);
-                    getActivity().finish();
+                    if(getActivity() instanceof MainActivity){ // 如果是主活动
+                        Intent intent = new Intent(getActivity(), WeatherAcitivy.class);
+                        intent.putExtra("locationname", locationname);
+                        startActivity(intent);
+                        getActivity().finish();
+                    } else if (getActivity() instanceof WeatherAcitivy){ // 如果已经是在天气的活动上
+                        WeatherAcitivy activity = (WeatherAcitivy) getActivity();
+                        activity.drawerLayout.closeDrawers();
+                        activity.swipeRefreshLayout.setRefreshing(true);
+                        activity.requestWeather(locationname);
+                    }
+
                 }
             }
         });
